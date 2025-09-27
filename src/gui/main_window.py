@@ -22,14 +22,16 @@ class ClockInApp:
     
     def setup_window(self):
         """设置窗口属性"""
-        self.root.title("智能打卡机")
+        self.root.title("C-Record")
         self.root.geometry("900x700+200+100")
         self.root.resizable(True, True)
         self.root.minsize(800, 700)
         
         # 设置图标
         try:
-            self.root.iconbitmap("resources/icons/clock.ico")
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            icon_path = os.path.join(project_root, "res", "icons", "qiuqiu01.ico")
+            self.root.iconbitmap(icon_path)
         except:
             pass
         
@@ -45,7 +47,7 @@ class ClockInApp:
         main_frame.columnconfigure(1, weight=1)
         tab_control = ttk.Notebook(self.root)
         # 标题
-        title_label = ttk.Label(main_frame, text="智能打卡系统", 
+        title_label = ttk.Label(main_frame, text="C-Record", 
                                font=("Arial", 18, "bold"))
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
         
@@ -108,8 +110,6 @@ class ClockInApp:
         self.refresh_btn = ttk.Button(button_frame, text="刷新数据", 
                                 command=self.refresh_monthly_display)
         self.refresh_btn.pack(side=tk.LEFT, padx=5)
-
-
     def show_check_settings(self):
         """显示查询设置窗口"""
         # 创建设置窗口
@@ -164,7 +164,6 @@ class ClockInApp:
             
         # 绑定回车键确认
         settings_window.bind('<Return>', lambda e: confirm_query())
-
     def execute_monthly_query(self, year=None, month=None):
         """执行月份查询，显示每日打卡详情"""
         try:
@@ -342,38 +341,34 @@ class ClockInApp:
 
     def refresh_display(self):
         """刷新所有显示"""
-        print(f"update_last_clock_times")
         self.update_last_clock_times()
         self.refresh_monthly_display()
-        print(f"refresh_monthly_display")
 
     def update_last_clock_times(self):
         """更新最后打卡时间显示"""
         last_in = self.clock_manager.get_last_clock_in()
         last_out = self.clock_manager.get_last_clock_out()
+        print(f"最后上班记录: {last_in}, 最后下班记录: {last_out}") 
         
         if last_in:
-            self.last_in_var.set(f"{last_in['date']} {last_in['time']}")
+            self.last_in_var.set(f"{last_in['time']}")
         else:
             self.last_in_var.set("暂无记录")
         
         if last_out:
-            self.last_out_var.set(f"{last_out['date']} {last_out['time']}")
+            self.last_out_var.set(f"{last_out['time']}")
         else:
             self.last_out_var.set("暂无记录")
 
     def refresh_monthly_display(self):
         """刷新本月统计显示"""
-        print(f"monthly_stats")
         try:
             # 清空现有记录
-            print(f"monthly_stats")
             for item in self.daily_tree.get_children():
                 self.daily_tree.delete(item)
             
             # 计算本月统计数据
             monthly_stats = self.clock_manager.calculate_monthly_statistics(rest_periods=self.rest_periods)
-            print(f"monthly_stats {monthly_stats}")
             
             # 更新统计信息
             self.month_days_var.set(str(monthly_stats['total_days']))
@@ -640,11 +635,6 @@ class ClockInApp:
         time_frame = ttk.Frame(parent)
         time_frame.grid(row=row, column=0, columnspan=3, pady=10)
         
-        self.time_var = tk.StringVar()
-        time_label = ttk.Label(time_frame, textvariable=self.time_var, 
-                              font=("Arial", 14), foreground="blue")
-        time_label.pack()
-        
         self.date_var = tk.StringVar()
         date_label = ttk.Label(time_frame, textvariable=self.date_var,
                               font=("Arial", 12))
@@ -886,8 +876,7 @@ class ClockInApp:
     def update_time_display(self):
         """更新时间显示"""
         now = datetime.now()
-        self.time_var.set(f"当前时间: {now.strftime('%H:%M:%S')}")
-        self.date_var.set(f"当前日期: {now.strftime('%Y年%m月%d日 %A')}")
+        self.date_var.set(f"当前日期: {now.strftime('%Y年%m月%d日 %H:%M:%S %A')}")
         self.root.after(1000, self.update_time_display)
     
     def clock_in(self):

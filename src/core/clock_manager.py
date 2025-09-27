@@ -24,10 +24,8 @@ class ClockManager:
             if record_type == "in":
                 return self.db.add_clock_record(custom_time, "in", notes)
             else:
-                print(f"{record_type}")
                 return self.db.add_clock_record(custom_time, "out", notes)
         except ValueError:
-            print(f"custom_clock err")
             return False
     
     def get_last_clock_in(self):
@@ -82,7 +80,6 @@ class ClockManager:
                 if overlap_end > overlap_start:
                     rest_hours = (overlap_end - overlap_start).total_seconds() / 3600  # 转换为小时
                     work_hours -= rest_hours
-                    print(f"扣除休息时间: {rest_start_str}-{rest_end_str}, 时长: {rest_hours:.2f}小时")
                     
             except Exception as e:
                 print(f"计算休息时间错误: {e}")
@@ -94,8 +91,7 @@ class ClockManager:
         """计算某天的工作时长（小时）"""
         try:
             records = self.db.get_date_records(date_str)
-            print(f"计算日期 {date_str} 的工作时长，找到 {len(records)} 条记录")
-            
+
             if len(records) < 2:
                 print(f"记录不足2条，返回0")
                 return 0.0
@@ -104,8 +100,6 @@ class ClockManager:
             in_records = [r for r in records if r['type'] == 'in']
             out_records = [r for r in records if r['type'] == 'out']
             
-            print(f"上班记录: {len(in_records)} 条，下班记录: {len(out_records)} 条")
-            
             if not in_records or not out_records:
                 print(f"缺少上班或下班记录")
                 return 0.0
@@ -113,9 +107,6 @@ class ClockManager:
             # 使用第一个in和最后一个out计算总时长
             first_in_record = in_records[0]
             last_out_record = out_records[-1]
-            
-            print(f"第一条上班记录: {first_in_record}")
-            print(f"最后一条下班记录: {last_out_record}")
             
             # 统一处理日期时间格式（处理格式不一致的问题）
             def normalize_datetime(dt_str):
@@ -146,9 +137,6 @@ class ClockManager:
             first_in_str = normalize_datetime(first_in_str)
             last_out_str = normalize_datetime(last_out_str)
             
-            print(f"标准化后的上班时间: {first_in_str}")
-            print(f"标准化后的下班时间: {last_out_str}")
-            
             # 解析时间
             first_in = datetime.strptime(first_in_str, "%Y-%m-%d %H:%M:%S")
             last_out = datetime.strptime(last_out_str, "%Y-%m-%d %H:%M:%S")
@@ -160,12 +148,10 @@ class ClockManager:
             total_seconds = (last_out - first_in).total_seconds()
             total_hours = total_seconds / 3600
             
-            print(f"扣除休息前总时长: {total_hours:.2f} 小时")
             
             # 扣除休息时间
             if rest_periods:
                 total_hours = self._subtract_rest_time(total_hours, first_in, last_out, rest_periods)
-                print(f"扣除休息后总时长: {total_hours:.2f} 小时")
             
             return total_hours
             
@@ -201,7 +187,6 @@ class ClockManager:
     
     def calculate_monthly_statistics(self, year: int = None, month: int = None, rest_periods: list = None) -> dict:
         """计算月度统计"""
-        print(f"计算 {year}年{month}月 的统计，休息时间段: {rest_periods}")
         now = datetime.now()
         if year is None:
             year = now.year
@@ -209,7 +194,6 @@ class ClockManager:
             month = now.month
         
         records = self.db.get_monthly_records(year, month)
-        print(f"找到 {len(records)} 条记录")
         
         if not records:
             return {
@@ -229,17 +213,12 @@ class ClockManager:
                 daily_records[date_str] = []
             daily_records[date_str].append(record)
         
-        print(f"有记录的日期: {list(daily_records.keys())}")
-        
         # 计算每天的工作时长
         work_days = []
         total_hours = 0.0
         
         for date_str, day_records in daily_records.items():
-            print(f"计算日期 {date_str} 的工作时长")
             daily_hours = self.calculate_daily_work_time(date_str, rest_periods)
-            print(f"日期 {date_str} 工作时长: {daily_hours:.2f} 小时")
-            
             if daily_hours > 0:
                 work_days.append({
                     'date': date_str,
@@ -250,9 +229,7 @@ class ClockManager:
         
         total_days = len(work_days)
         average_hours = total_hours / total_days if total_days > 0 else 0.0
-        
-        print(f"月度统计结果: {total_days}天, {total_hours:.2f}小时, 平均{average_hours:.2f}小时/天")
-        
+                
         return {
             'year': year,
             'month': month,

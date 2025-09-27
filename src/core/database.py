@@ -3,6 +3,7 @@
 """
 import sqlite3
 import os
+import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
@@ -43,14 +44,21 @@ class DatabaseManager:
     def add_clock_record(self, record_time: str, record_type: str, notes: str = "") -> bool:
         """添加打卡记录，支持仅时间部分的输入"""
         try:
-            record_datetime = record_time
-            
-            # 解析record_datetime为datetime对象
-            record_datetime_obj = datetime.strptime(record_datetime, "%Y-%m-%d %H:%M:%S")
-            print(f"record_datetime_obj {record_datetime_obj}")
+            # 尝试用标准格式解析
+            try:
+                record_datetime_obj = datetime.strptime(record_time, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                # 用正则补零
+                m = re.match(r"(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{1,2}):(\d{1,2})", record_time)
+                if not m:
+                    raise ValueError("时间格式不正确")
+                y, mo, d, h, mi, s = m.groups()
+                record_time_fixed = f"{y}-{mo.zfill(2)}-{d.zfill(2)} {h.zfill(2)}:{mi.zfill(2)}:{s.zfill(2)}"
+                record_datetime_obj = datetime.strptime(record_time_fixed, "%Y-%m-%d %H:%M:%S")
+            # 强制补零
+            record_datetime = record_datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
             record_date = record_datetime_obj.strftime("%Y-%m-%d")
-            print(f"record_date {record_date}")
-            
+                        
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
@@ -70,16 +78,16 @@ class DatabaseManager:
                     UPDATE clock_records 
                     SET record_time = ?, record_datetime = ?, notes = ?
                     WHERE id = ?
-                ''', (record_time, record_datetime, notes, existing_record[0]))
+                ''', (record_datetime, record_datetime, notes, existing_record[0]))
             else:
                 # 如果不存在，插入新记录
                 cursor.execute('''
                     INSERT INTO clock_records 
                     (record_date, record_time, record_type, record_datetime, notes)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (record_date, record_time, record_type, record_datetime, notes))
+                ''', (record_date, record_datetime, record_type, record_datetime, notes))
             
-            print(f"database {record_time} {record_type}")
+            print(f"database {record_datetime} {record_type}")
             conn.commit()
             conn.close()
             return True
@@ -118,7 +126,6 @@ class DatabaseManager:
                     'datetime': row[2],
                     'notes': row[3] or ''
                 })
-            print(f"获取到的记录: {records}")
             conn.close()
             return records
             
@@ -136,7 +143,7 @@ class DatabaseManager:
                 SELECT record_date, record_time, record_datetime, notes
                 FROM clock_records 
                 WHERE record_type = ? 
-                ORDER BY record_datetime DESC 
+                ORDER BY datetime(record_datetime) DESC 
                 LIMIT 1
             ''', (record_type,))
             
