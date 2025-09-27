@@ -158,9 +158,17 @@ class DatabaseManager:
             print(f"查询最后打卡时间失败: {e}")
             return None
     
-    def get_monthly_records(self, year: int, month: int) -> List[Dict]:
+    def get_monthly_records(self, year: int = None, month: int = None) -> List[Dict]:
         """获取指定年月的所有记录"""
         try:
+            # 如果 year 或 month 为 None，使用当前年月
+            now = datetime.now()
+            if year is None:
+                year = now.year
+            if month is None:
+                month = now.month
+            year = int(year)
+            month = int(month)
             month_str = f"{year:04d}-{month:02d}"
             
             conn = sqlite3.connect(self.db_path)

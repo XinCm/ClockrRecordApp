@@ -153,7 +153,7 @@ class ClockInApp:
             month = month_var.get() if month_var.get() != '全部' else None
             settings_window.destroy()
             self.show_monthly_records(year, month)
-            
+
         # 确认按钮
         confirm_btn = ttk.Button(button_frame, text="确认查询", command=confirm_query)
         confirm_btn.pack(side=tk.LEFT, padx=10)
@@ -230,14 +230,13 @@ class ClockInApp:
 
     def show_monthly_records(self, year, month):
         """显示月度打卡记录和统计数据"""
-        # 获取打卡记录
-        records = self.get_monthly_records(year, month)
-        
-        # 计算统计数据
-        total_days = len(records)
-        total_hours = sum(record['hours'] for record in records)
-        average_hours = total_hours / total_days if total_days > 0 else 0
-        
+        # 获取月度统计数据
+        stats = self.clock_manager.calculate_monthly_statistics(year, month, self.rest_periods)
+        work_days = stats.get('work_days', [])
+        total_days = stats.get('total_days', 0)
+        total_hours = stats.get('total_hours', 0.0)
+        average_hours = stats.get('average_hours', 0.0)
+
         # 创建显示窗口
         display_window = tk.Toplevel(self.root)
         display_window.title(f"{year}年{month}月打卡记录")
@@ -245,72 +244,35 @@ class ClockInApp:
         display_window.resizable(False, False)
         display_window.transient(self.root)
         display_window.grab_set()
-        
+
         # 居中显示
         self.center_window(display_window)
-        
+
         # 主框架
         main_frame = ttk.Frame(display_window, padding=20)
         main_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # 树形视图显示打卡记录
         tree = ttk.Treeview(main_frame, columns=("日期", "工时"), show="headings")
         tree.heading("日期", text="日期")
-        tree.heading("上班时间", text="上班时间")
-        tree.heading("下班时间", text="下班时间")
         tree.heading("工时", text="工时")
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
         # 滚动条
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         tree.configure(yscroll=scrollbar.set)
-        
+
         # 添加数据到树形视图
-        for record in records:
-            tree.insert("", "end", values=(record['date'], record['hours']))
-        
+        for record in work_days:
+            tree.insert("", "end", values=(record['date'], f"{record['hours']:.2f}"))
+
         # 统计数据
         stats_frame = ttk.Frame(display_window, padding=10)
         stats_frame.pack(pady=10)
-        
+
         ttk.Label(stats_frame, text=f"总天数: {total_days}").grid(row=0, column=0, padx=10)
         ttk.Label(stats_frame, text=f"总工时: {total_hours:.2f} 小时").grid(row=0, column=1, padx=10)
         ttk.Label(stats_frame, text=f"平均每日工时: {average_hours:.2f} 小时").grid(row=0, column=2, padx=10)
-
-
-    def get_monthly_records(self, year, month):
-        """查询月份统计"""
-        try:
-            if not year and month != '全部':
-                messagebox.showwarning("警告", "请选择年份！")
-                return
-            
-            # 获取统计信息
-            monthly_stats = self.clock_manager.get_monthly_statistics(
-                year if year else None, 
-                month if month != '全部' else None,
-                self.rest_periods
-            )
-            
-            if not monthly_stats:
-                messagebox.showinfo("提示", "没有找到相关统计信息！")
-                return
-            
-            messagebox.showinfo("完成", f"共找到 {len(monthly_stats)} 个月的统计信息")
-            
-        except Exception as e:
-            messagebox.showerror("错误", f"查询失败: {e}")
-
-    def refresh_monthly_display(self):
-        """刷新月份统计显示"""
-        # 获取当前显示的数据并重新查询
-        try:
-            # 这里可以添加逻辑来判断当前显示的是什么数据，然后重新查询
-            # 暂时简单重新查询所有数据
-            self.execute_monthly_query(None, None)
-        except Exception as e:
-            messagebox.showerror("错误", f"刷新失败: {e}")
 
     def center_window(self, window):
         """窗口居中显示"""

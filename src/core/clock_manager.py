@@ -178,8 +178,10 @@ class ClockManager:
     def get_monthly_statistics(self, year: str = None, month: str = None, rest_periods: list = None) -> list:
         """获取月份统计信息"""
         try:
-            return self.db.get_monthly_records(year,month)
-            
+            records = self.db.get_monthly_records(year, month)
+            if records is None:
+                return []
+            return records
         except Exception as e:
             print(f"获取月份统计失败: {e}")
             return []
@@ -205,8 +207,6 @@ class ClockManager:
             year = now.year
         if month is None:
             month = now.month
-        
-        
         
         records = self.db.get_monthly_records(year, month)
         print(f"找到 {len(records)} 条记录")
